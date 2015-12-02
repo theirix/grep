@@ -1,7 +1,7 @@
 " File: grep.vim
 " Author: Yegappan Lakshmanan (yegappan AT yahoo DOT com)
-" Version: 1.11
-" Last Modified: April 24, 2013
+" Version: 1.11i
+" Last Modified: Nov 2, 2015
 " 
 " Overview
 " --------
@@ -291,6 +291,12 @@
 "
 "       :let Grep_Shell_Escape_Char = "'"
 "
+" To use relative pathes in quickfix window instead of absolute ones you can
+" set Grep_Relative_Path variable to '1'. It works if a 'Grep_Xargs_Options'
+" is enabled and if the operating system is UNIX. Default value: 0.
+"
+"       :let Grep_Relative_Path = 0
+"
 " --------------------- Do not modify after this line ---------------------
 if exists("loaded_grep")
     finish
@@ -357,6 +363,11 @@ endif
 " The command-line arguments to supply to the xargs utility
 if !exists('Grep_Xargs_Options')
     let Grep_Xargs_Options = '-0'
+endif
+
+" Use relative pathes in quickfix windows
+if !exists('Grep_Relative_Path')
+  let Grep_Relative_Path = 0
 endif
 
 " The find utility is from the cygwin package or some other find utility.
@@ -615,7 +626,19 @@ function! s:RunGrepRecursive(cmd_name, grep_cmd, action, ...)
         endwhile
     endif
 
-    if g:Grep_Find_Use_Xargs == 1
+    if g:Grep_Find_Use_Xargs == 1 && g:Grep_Relative_Path == 1
+        let cmd = " cd " . startdir . " && "
+        let cmd = cmd . " " . g:Grep_Find_Path . ' "' . '.' . '"'
+        let cmd = cmd . " " . find_prune . " -prune -o"
+        let cmd = cmd . " " . find_skip_files
+        let cmd = cmd . " " . find_file_pattern
+        let cmd = cmd . " -print0 | "
+        let cmd = cmd . g:Grep_Xargs_Path . ' ' . g:Grep_Xargs_Options
+        let cmd = cmd . ' ' . grep_path . " " . grep_opt . " -n "
+        let cmd = cmd . grep_expr_option . " " . pattern
+        let cmd = cmd . ' ' . g:Grep_Null_Device
+        let cmd = cmd . " | sed 's,^\./,,'"
+    elseif g:Grep_Find_Use_Xargs == 1
         let cmd = g:Grep_Find_Path . ' "' . startdir . '"'
         let cmd = cmd . " " . find_prune . " -prune -o"
         let cmd = cmd . " " . find_skip_files
